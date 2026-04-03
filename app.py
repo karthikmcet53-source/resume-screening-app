@@ -4,6 +4,7 @@ import PyPDF2
 import pandas as pd
 import re
 from openai import OpenAI
+from io import BytesIO   # ✅ NEW
 
 # ================== CONFIG ==================
 st.set_page_config(page_title="AI Recruitment ATS", layout="wide")
@@ -54,6 +55,9 @@ if "df" not in st.session_state:
 if "decisions" not in st.session_state:
     st.session_state["decisions"] = {}
 
+if "resume_texts" not in st.session_state:   # ✅ NEW
+    st.session_state["resume_texts"] = {}
+
 # ================== FUNCTIONS ==================
 def extract_text(file):
     text = ""
@@ -67,16 +71,15 @@ def extract_text(file):
     return text
 
 
-# 🔥 FIXED EXPERIENCE FUNCTION
 def extract_experience(text):
     text = text.lower()
 
     patterns = [
-        r'(\d+\.?\d*)\s*\+?\s*(years|yrs|year)',          # 5 years / 5+ years / 5.5 years
-        r'experience\s*[:\-]?\s*(\d+\.?\d*)',             # Experience: 5
-        r'(\d+\.?\d*)\s*years?\s*of\s*experience',        # 5 years of experience
-        r'over\s*(\d+\.?\d*)\s*years',                    # over 10 years
-        r'(\d+\.?\d*)\s*yr'                              # 5 yr
+        r'(\d+\.?\d*)\s*\+?\s*(years|yrs|year)',
+        r'experience\s*[:\-]?\s*(\d+\.?\d*)',
+        r'(\d+\.?\d*)\s*years?\s*of\s*experience',
+        r'over\s*(\d+\.?\d*)\s*years',
+        r'(\d+\.?\d*)\s*yr'
     ]
 
     values = []
@@ -84,10 +87,7 @@ def extract_experience(text):
     for pattern in patterns:
         matches = re.findall(pattern, text)
         for match in matches:
-            if isinstance(match, tuple):
-                val = match[0]
-            else:
-                val = match
+            val = match[0] if isinstance(match, tuple) else match
             try:
                 values.append(float(val))
             except:
@@ -109,6 +109,13 @@ def ai_score(text, jd):
     except:
         return 50
 
+
+# ✅ NEW FUNCTION (EXPORT)
+def convert_to_excel(df):
+    output = BytesIO()
+    df.to_excel(output, index=False)
+    return output.getvalue()
+
 # ================== HEADER ==================
 st.markdown("""
 <h1 style='text-align:center;'>🧠 AI Recruitment ATS</h1>
@@ -125,14 +132,11 @@ page = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 
-# FILTERS
-st.sidebar.subheader("⚙️ Filters")
 min_score = st.sidebar.slider("Minimum Score", 0, 100, 50)
 min_exp = st.sidebar.slider("Minimum Experience", 0, 20, 0)
 
 st.sidebar.markdown("---")
 
-# INSTRUCTIONS
 st.sidebar.subheader("📌 Instructions")
 st.sidebar.markdown("""
 1. Upload resumes  
@@ -160,6 +164,9 @@ if page == "📥 Screening":
             for f in uploaded_files:
                 text = extract_text(f)
 
+                # ✅ STORE TEXT FOR PREVIEW
+                st.session_state["resume_texts"][f.name] = text
+
                 data.append({
                     "Candidate": f.name,
                     "Score": ai_score(text, jd),
@@ -179,37 +186,61 @@ if page == "📥 Screening":
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # RESULTS
+    # RESULTS + PREVIEW
     if st.session_state["df"] is not None:
 
         df = st.session_state["df"]
 
-        st.markdown('<div class="card">', unsafe_allow_html=True)
+        # ✅ DROPDOWN FOR PREVIEW
+        selected_candidate = st.selectbox(
+            "🔍 Select Candidate for Resume Preview",
+            df["Candidate"]
+        )
 
-        st.subheader("🏆 Top Candidates")
+        col_left, col_right = st.columns([1,2])
 
-        for i, row in df.head(5).iterrows():
+        # LEFT SIDE (UNCHANGED UI)
+        with col_left:
 
-            name = row["Candidate"]
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.subheader("🏆 Top Candidates")
 
-            st.write(f"👤 {name}")
-            st.write(f"Score: {row['Score']} | Experience: {row['Experience']} yrs")
+            for i, row in df.head(5).iterrows():
 
-            col1, col2 = st.columns(2)
+                name = row["Candidate"]
 
-            if col1.button("✅ Shortlist", key=f"s{i}"):
-                st.session_state["decisions"][name] = "Shortlisted"
+                st.write(f"👤 {name}")
+                st.write(f"Score: {row['Score']} | Experience: {row['Experience']} yrs")
 
-            if col2.button("❌ Reject", key=f"r{i}"):
-                st.session_state["decisions"][name] = "Rejected"
+                col1, col2 = st.columns(2)
 
-            decision = st.session_state["decisions"].get(name, "Pending")
-            st.info(f"Status: {decision}")
+                if col1.button("✅ Shortlist", key=f"s{i}"):
+                    st.session_state["decisions"][name] = "Shortlisted"
 
-            st.progress(int(row["Score"]))
-            st.markdown("---")
+                if col2.button("❌ Reject", key=f"r{i}"):
+                    st.session_state["decisions"][name] = "Rejected"
 
-        st.markdown('</div>', unsafe_allow_html=True)
+                decision = st.session_state["decisions"].get(name, "Pending")
+                st.info(f"Status: {decision}")
+
+                st.progress(int(row["Score"]))
+                st.markdown("---")
+
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # RIGHT SIDE (✅ NEW PREVIEW)
+        with col_right:
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.subheader("📄 Resume Preview")
+
+            text = st.session_state["resume_texts"].get(selected_candidate, "")
+
+            if text:
+                st.text_area("Resume Content", text, height=500)
+            else:
+                st.info("No preview available")
+
+            st.markdown('</div>', unsafe_allow_html=True)
 
 # ================== DASHBOARD ==================
 elif page == "📊 Dashboard":
@@ -246,6 +277,16 @@ elif page == "📂 Pipeline":
         ).fillna("Pending")
 
         st.dataframe(df, use_container_width=True)
+
+        # ✅ EXPORT BUTTON
+        excel = convert_to_excel(df)
+
+        st.download_button(
+            label="📥 Export to Excel",
+            data=excel,
+            file_name="ATS_Report.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
     else:
         st.info("No candidates yet")
