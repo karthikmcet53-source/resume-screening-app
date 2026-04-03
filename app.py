@@ -92,6 +92,11 @@ st.sidebar.markdown("---")
 # Filters
 st.sidebar.markdown("### ⚙️ Filters")
 
+page = st.sidebar.radio(
+    "🧭 Navigate",
+    ["📥 Resume Screening", "📊 Dashboard", "📂 Candidate Pipeline"]
+)
+
 min_score = st.sidebar.slider("Minimum Score", 0, 100, 50)
 min_exp = st.sidebar.slider("Minimum Experience", 0, 10, 0)
 
@@ -215,6 +220,7 @@ if page == "Screening":
             # TABLE
             st.subheader("📋 All Candidates")
             st.dataframe(df, use_container_width=True)
+            st.session_state["df"] = df
 
 # ================= TAB 2 =================
 elif page == "Dashboard":
@@ -233,6 +239,7 @@ elif page == "Dashboard":
 
     else:
         st.info("Run screening first")
+        df = st.session_state["df"]
 
 # ================= TAB 3 =================
 elif page == "Dashboard":
@@ -254,6 +261,7 @@ elif page == "Dashboard":
             df["Recruiter Decision"] = "Pending"
 
         st.dataframe(df, use_container_width=True)
+        df = st.session_state["df"]
 
         st.bar_chart(df["Stage"].value_counts())
 
