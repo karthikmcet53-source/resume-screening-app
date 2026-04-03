@@ -11,22 +11,11 @@ st.set_page_config(page_title="AI Recruitment ATS", layout="wide")
 # ================== UI STYLE ==================
 st.markdown("""
 <style>
+.stApp { background: #f1f5f9; color: #0f172a; }
 
-/* MAIN BACKGROUND */
-.stApp {
-    background: #f1f5f9;
-    color: #0f172a;
-}
+[data-testid="stSidebar"] { background: #020617; }
+[data-testid="stSidebar"] * { color: #e2e8f0; }
 
-/* SIDEBAR */
-[data-testid="stSidebar"] {
-    background: #020617;
-}
-[data-testid="stSidebar"] * {
-    color: #e2e8f0;
-}
-
-/* CARD */
 .card {
     background: white;
     padding: 20px;
@@ -35,7 +24,6 @@ st.markdown("""
     margin-bottom: 20px;
 }
 
-/* BUTTON */
 .stButton>button {
     background: linear-gradient(90deg, #6366f1, #8b5cf6);
     color: white;
@@ -44,19 +32,16 @@ st.markdown("""
     font-weight: 600;
 }
 
-/* INPUT */
 textarea, input {
     background: white !important;
     color: black !important;
 }
 
-/* METRICS */
 [data-testid="metric-container"] {
     background: white;
     padding: 15px;
     border-radius: 10px;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -82,9 +67,33 @@ def extract_text(file):
     return text
 
 
+# 🔥 FIXED EXPERIENCE FUNCTION
 def extract_experience(text):
-    match = re.findall(r'(\\d+)\\+?\\s+years', text.lower())
-    return max([int(x) for x in match], default=0)
+    text = text.lower()
+
+    patterns = [
+        r'(\d+\.?\d*)\s*\+?\s*(years|yrs|year)',          # 5 years / 5+ years / 5.5 years
+        r'experience\s*[:\-]?\s*(\d+\.?\d*)',             # Experience: 5
+        r'(\d+\.?\d*)\s*years?\s*of\s*experience',        # 5 years of experience
+        r'over\s*(\d+\.?\d*)\s*years',                    # over 10 years
+        r'(\d+\.?\d*)\s*yr'                              # 5 yr
+    ]
+
+    values = []
+
+    for pattern in patterns:
+        matches = re.findall(pattern, text)
+        for match in matches:
+            if isinstance(match, tuple):
+                val = match[0]
+            else:
+                val = match
+            try:
+                values.append(float(val))
+            except:
+                continue
+
+    return max(values) if values else 0
 
 
 def ai_score(text, jd):
@@ -109,7 +118,6 @@ st.markdown("""
 # ================== SIDEBAR ==================
 st.sidebar.title("🧠 ATS Panel")
 
-# NAVIGATION
 page = st.sidebar.radio(
     "Navigation",
     ["📥 Screening", "📊 Dashboard", "📂 Pipeline"]
@@ -119,31 +127,19 @@ st.sidebar.markdown("---")
 
 # FILTERS
 st.sidebar.subheader("⚙️ Filters")
-
 min_score = st.sidebar.slider("Minimum Score", 0, 100, 50)
-min_exp = st.sidebar.slider("Minimum Experience", 0, 10, 0)
+min_exp = st.sidebar.slider("Minimum Experience", 0, 20, 0)
 
 st.sidebar.markdown("---")
 
-# INSTRUCTIONS (NEW)
+# INSTRUCTIONS
 st.sidebar.subheader("📌 Instructions")
-
 st.sidebar.markdown("""
-**How to use this ATS:**
-
-1. 📥 Upload resumes (PDF/DOCX)  
-2. 📝 Paste job description  
-3. 🚀 Click **Analyze Candidates**  
-4. 📊 View top candidates  
-5. ✅ Shortlist / ❌ Reject candidates  
-6. 📂 Track decisions in Pipeline  
-
----
-
-**Tips:**
-- Use clear job descriptions  
-- Upload multiple resumes  
-- Adjust filters for better results  
+1. Upload resumes  
+2. Paste job description  
+3. Click Analyze  
+4. Review candidates  
+5. Shortlist / Reject  
 """)
 
 # ================== SCREENING ==================
@@ -151,12 +147,7 @@ if page == "📥 Screening":
 
     st.markdown('<div class="card">', unsafe_allow_html=True)
 
-    uploaded_files = st.file_uploader(
-        "Upload Resumes",
-        type=["pdf","docx"],
-        accept_multiple_files=True
-    )
-
+    uploaded_files = st.file_uploader("Upload Resumes", type=["pdf","docx"], accept_multiple_files=True)
     jd = st.text_area("Paste Job Description")
 
     if st.button("🚀 Analyze Candidates"):
@@ -202,7 +193,7 @@ if page == "📥 Screening":
             name = row["Candidate"]
 
             st.write(f"👤 {name}")
-            st.write(f"Score: {row['Score']} | Experience: {row['Experience']}")
+            st.write(f"Score: {row['Score']} | Experience: {row['Experience']} yrs")
 
             col1, col2 = st.columns(2)
 
@@ -230,7 +221,6 @@ elif page == "📊 Dashboard":
         df = st.session_state["df"]
 
         col1, col2, col3 = st.columns(3)
-
         col1.metric("Total Candidates", len(df))
         col2.metric("Avg Score", round(df["Score"].mean(), 2))
         col3.metric("Shortlisted", len(df[df["Score"] >= 70]))
