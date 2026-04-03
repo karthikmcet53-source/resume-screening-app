@@ -125,7 +125,9 @@ if analyze:
 
         # Status column
         df["Status"] = df["Score"].apply(
-            lambda x: "🟢 Shortlisted" if x >= 70 else "🔴 Rejected"
+            lambda x: "🟢 Shortlisted" if x >= 70 else 
+                      "🎈Review" if x >= 40 else 
+                      "🔴 Rejected" 
         )
 
         # ================= KPI =================
