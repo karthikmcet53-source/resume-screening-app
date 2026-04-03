@@ -5,7 +5,10 @@ import pandas as pd
 import re
 from openai import OpenAI
 import os
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+import streamlit as st
+from openai import OpenAI
+
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 # ================= FUNCTIONS =================
 
 def extract_text(file):
