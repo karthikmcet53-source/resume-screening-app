@@ -5,84 +5,54 @@ import pandas as pd
 import re
 from openai import OpenAI
 
-# ================= INIT =================
+# ================== CONFIG ==================
 st.set_page_config(page_title="AI Recruitment ATS", layout="wide")
+
+# ================== CSS ==================
 st.markdown("""
 <style>
-
-/* Background */
 .stApp {
     background: linear-gradient(135deg, #0f172a, #1e293b);
     color: white;
 }
-
-/* Glass Card */
 .glass {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255,255,255,0.08);
     backdrop-filter: blur(12px);
     border-radius: 16px;
     padding: 20px;
     border: 1px solid rgba(255,255,255,0.1);
     box-shadow: 0 8px 32px rgba(0,0,0,0.3);
 }
-
-/* Buttons */
 .stButton>button {
     background: linear-gradient(90deg, #6366f1, #8b5cf6);
     color: white;
     border-radius: 10px;
-    padding: 10px 20px;
-    border: none;
-    font-weight: 600;
-    transition: 0.3s;
 }
-
-.stButton>button:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 20px rgba(99,102,241,0.5);
-}
-
-/* Tabs */
-button[data-baseweb="tab"] {
-    font-size: 16px;
-    font-weight: 600;
-    color: #cbd5f5;
-}
-
-button[data-baseweb="tab"][aria-selected="true"] {
-    color: white;
-    border-bottom: 3px solid #6366f1;
-}
-
-/* Metrics */
-[data-testid="metric-container"] {
-    background: rgba(255,255,255,0.08);
-    padding: 15px;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.1);
-}
-
-/* Input fields */
-textarea, input {
-    background-color: rgba(255,255,255,0.08) !important;
-    color: white !important;
-}
-
-/* Progress bar */
-.stProgress > div > div > div {
-    background-color: #6366f1;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
+# Sidebar style
+st.sidebar.markdown("""
+<style>
+[data-testid="stSidebar"] {
+    background: #020617;
+}
+[data-testid="stSidebar"] * {
+    color: white;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ================== INIT ==================
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
+if "df" not in st.session_state:
+    st.session_state["df"] = None
 
 if "decisions" not in st.session_state:
     st.session_state["decisions"] = {}
 
-# ================= FUNCTIONS =================
-
+# ================== FUNCTIONS ==================
 def extract_text(file):
     text = ""
     if file.name.endswith(".pdf"):
@@ -100,218 +70,103 @@ def extract_experience(text):
     return max([int(x) for x in match], default=0)
 
 
-def ai_score_resume(resume_text, jd_text):
-    prompt = f"""
-    Evaluate how well this resume matches the job description.
-
-    Resume:
-    {resume_text[:2000]}
-
-    Job Description:
-    {jd_text[:1000]}
-
-    Give a match score from 0 to 100.
-    Only return the number.
-    """
-
+def ai_score(text, jd):
     try:
-        response = client.chat.completions.create(
+        res = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": f"Score match 0-100:\n{text[:1500]}\nJD:\n{jd[:800]}"}]
         )
-        return float(response.choices[0].message.content.strip())
+        return float(res.choices[0].message.content.strip())
     except:
         return 50
 
 
-def generate_ai_summary(text):
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[
-                {"role": "system", "content": "You are a recruitment assistant."},
-                {"role": "user", "content": f"Summarize this resume:\n{text[:2000]}"}
-            ]
-        )
-        return response.choices[0].message.content.strip()
-    except:
-        return "Summary not available"
-
-# ================= HEADER =================
+# ================== HEADER ==================
 st.markdown("""
-<h1 style='text-align: center; color: white;'>
-🧠 AI Recruitment ATS
-</h1>
-<p style='text-align: center; color: #cbd5f5; font-size:18px;'>
-Smart Resume Screening & Candidate Intelligence Platform
-</p>
-""", unsafe_allow_html=True)
-# ================= SIDEBAR =================
-
-st.sidebar.markdown("""
-<h2 style='color:white;'>🧠 ATS Panel</h2>
+<h1 style='text-align:center;'>🧠 AI Recruitment ATS</h1>
+<p style='text-align:center;color:#cbd5f5;'>Smart Resume Screening Platform</p>
 """, unsafe_allow_html=True)
 
-# Navigation
-st.sidebar.markdown("### 🧭 Navigation")
+# ================== SIDEBAR ==================
+st.sidebar.title("🧠 ATS Panel")
+
 page = st.sidebar.radio(
-    "Go to",
+    "Navigation",
     ["📥 Screening", "📊 Dashboard", "📂 Pipeline"]
 )
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("""
-<style>
-[data-testid="stSidebar"] {
-    background: #020617;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# Filters
-st.sidebar.markdown("### ⚙️ Filters")
 
 min_score = st.sidebar.slider("Minimum Score", 0, 100, 50)
 min_exp = st.sidebar.slider("Minimum Experience", 0, 10, 0)
 
-st.sidebar.markdown("---")
+# ================== PAGE 1 ==================
+if page == "📥 Screening":
 
-# Instructions
-st.sidebar.markdown("### 📌 Instructions")
+    st.markdown('<div class="glass">', unsafe_allow_html=True)
 
-st.sidebar.info("""
-1. Upload resumes (PDF/DOCX)
-2. Paste job description
-3. Click Analyze
-4. Review candidates
-""")
+    uploaded_files = st.file_uploader("Upload Resumes", type=["pdf","docx"], accept_multiple_files=True)
+    jd = st.text_area("Paste Job Description")
 
-st.sidebar.markdown("---")
+    if st.button("🚀 Analyze"):
 
-# System Info
-st.sidebar.markdown("### 📊 System Status")
-st.sidebar.success("✅ AI Engine Active")
-st.sidebar.success("✅ ATS Ready")
-# ================= TABS =================
-tab1, tab2, tab3 = st.tabs([
-    "📥 Resume Screening",
-    "📊 Dashboard",
-    "📂 Candidate Pipeline"
-])
-
-# ================= TAB 1 =================
-with tab1:
-
-    uploaded_files = st.file_uploader(
-        "Upload Resumes",
-        type=["pdf", "docx"],
-        accept_multiple_files=True
-    )
-
-    jd_text = st.text_area("Paste Job Description")
-
-    analyze = st.button("🚀 Analyze Candidates")
-
-    if analyze:
-
-        if not uploaded_files or not jd_text:
-            st.warning("Please upload resumes and enter job description")
-
+        if not uploaded_files or not jd:
+            st.warning("Upload resumes & add JD")
         else:
-            results = []
+            data = []
 
-            for file in uploaded_files:
-                text = extract_text(file)
+            for f in uploaded_files:
+                text = extract_text(f)
 
-                score = ai_score_resume(text, jd_text)
-                exp = extract_experience(text)
-
-                results.append({
-                    "Candidate": file.name,
-                    "Score": score,
-                    "Experience": exp,
-                    "Summary": generate_ai_summary(text)
+                data.append({
+                    "Candidate": f.name,
+                    "Score": ai_score(text, jd),
+                    "Experience": extract_experience(text)
                 })
 
-            df = pd.DataFrame(results)
-
-            # Filters
+            df = pd.DataFrame(data)
             df = df[(df["Score"] >= min_score) & (df["Experience"] >= min_exp)]
-            df = df.sort_values(by="Score", ascending=False)
+            df = df.sort_values("Score", ascending=False)
 
-            # Status
-            df["Status"] = df["Score"].apply(
-                lambda x: "Shortlisted" if x >= 70 else
-                          "Review" if x >= 40 else
-                          "Rejected"
-            )
+            st.session_state["df"] = df
 
-            # KPIs
-            st.markdown('<div class="glass">', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-            st.subheader("📊 Overview")
+    # SHOW RESULTS
+    if st.session_state["df"] is not None:
 
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Total", len(df))
-            col2.metric("Avg Score", round(df["Score"].mean(), 2))
-            col3.metric("Shortlisted", len(df[df["Score"] >= 70]))
+        df = st.session_state["df"]
 
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-            # TOP CANDIDATES WITH BUTTONS
-            st.subheader("🏆 Top Candidates")
+        st.markdown('<div class="glass">', unsafe_allow_html=True)
 
-            top_df = df.head(5)
+        st.subheader("Top Candidates")
 
-            for i, row in top_df.iterrows():
+        for i, row in df.head(5).iterrows():
 
-                candidate = row["Candidate"]
+            c = row["Candidate"]
 
-                st.markdown(f"""
-                <div class="glass">
-                <h3>👤 {candidate}</h3>
-                <p>Score: {row['Score']}% | Experience: {row['Experience']} yrs</p>
-                <p>Status: {row['Status']}</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                col1, col2, col3 = st.columns(3)
+            st.markdown(f"**{c}** | Score: {row['Score']} | Exp: {row['Experience']}")
 
-                if col1.button("✅ Shortlist", key=f"short_{i}"):
-                    st.session_state["decisions"][candidate] = "Shortlisted"
+            col1, col2 = st.columns(2)
 
-                if col2.button("❌ Reject", key=f"reject_{i}"):
-                    st.session_state["decisions"][candidate] = "Rejected"
+            if col1.button("Shortlist", key=f"s{i}"):
+                st.session_state["decisions"][c] = "Shortlisted"
 
-                note = col3.text_input("📝 Notes", key=f"note_{i}")
+            if col2.button("Reject", key=f"r{i}"):
+                st.session_state["decisions"][c] = "Rejected"
 
-                if note:
-                    st.session_state["decisions"][candidate + "_note"] = note
+        st.markdown('</div>', unsafe_allow_html=True)
 
-                decision = st.session_state["decisions"].get(candidate)
-                if decision:
-                    st.success(f"Decision: {decision}")
+# ================== PAGE 2 ==================
+elif page == "📊 Dashboard":
 
-                note_val = st.session_state["decisions"].get(candidate + "_note")
-                if note_val:
-                    st.info(f"Note: {note_val}")
+    st.markdown('<div class="glass">', unsafe_allow_html=True)
 
-                st.progress(int(row["Score"]))
-                st.markdown("---")
+    if st.session_state["df"] is not None:
 
-            # TABLE
-            st.subheader("📋 All Candidates")
-            st.dataframe(df, use_container_width=True)
-
-# ================= TAB 2 =================
-with tab2:
-
-    st.subheader("📊 Hiring Dashboard")
-
-    if 'df' in locals() and not df.empty:
+        df = st.session_state["df"]
 
         col1, col2, col3 = st.columns(3)
-
         col1.metric("Total", len(df))
         col2.metric("Avg Score", round(df["Score"].mean(), 2))
         col3.metric("Shortlisted", len(df[df["Score"] >= 70]))
@@ -321,28 +176,24 @@ with tab2:
     else:
         st.info("Run screening first")
 
-# ================= TAB 3 =================
-with tab3:
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.subheader("📂 Candidate Pipeline")
+# ================== PAGE 3 ==================
+elif page == "📂 Pipeline":
 
-    if 'df' in locals() and not df.empty:
+    st.markdown('<div class="glass">', unsafe_allow_html=True)
 
-        df["Stage"] = df["Score"].apply(
-            lambda x: "Interview" if x >= 80 else
-                      "Review" if x >= 60 else
-                      "Rejected"
-        )
+    if st.session_state["df"] is not None:
 
-        if "decisions" in st.session_state:
-            decisions = st.session_state["decisions"]
-            df["Recruiter Decision"] = df["Candidate"].map(decisions).fillna("Pending")
-        else:
-            df["Recruiter Decision"] = "Pending"
+        df = st.session_state["df"]
 
-        st.dataframe(df, use_container_width=True)
+        df["Decision"] = df["Candidate"].map(
+            st.session_state["decisions"]
+        ).fillna("Pending")
 
-        st.bar_chart(df["Stage"].value_counts())
+        st.dataframe(df)
 
     else:
-        st.info("No candidates yet")
+        st.info("No data yet")
+
+    st.markdown('</div>', unsafe_allow_html=True)
