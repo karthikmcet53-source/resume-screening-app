@@ -6,27 +6,70 @@ import re
 from openai import OpenAI
 
 # ================== CONFIG ==================
-st.set_page_config(page_title="AI Recruitment ATS", layout="wide")
+st.set_page_config(page_title="Premium AI ATS", layout="wide")
 
-# ================== STYLE ==================
+# ================== PREMIUM UI ==================
 st.markdown("""
 <style>
-.stApp { background: #f1f5f9; }
 
-.card {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+/* GLOBAL */
+.stApp {
+    background: linear-gradient(135deg, #0f172a, #020617);
+    color: #e2e8f0;
+    font-family: 'Segoe UI', sans-serif;
 }
 
+/* SIDEBAR */
+[data-testid="stSidebar"] {
+    background: #020617;
+    border-right: 1px solid #1e293b;
+}
+[data-testid="stSidebar"] * {
+    color: #cbd5f5;
+}
+
+/* GLASS CARD */
+.card {
+    background: rgba(255,255,255,0.05);
+    padding: 20px;
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 20px;
+}
+
+/* BUTTONS */
 .stButton>button {
     background: linear-gradient(90deg, #6366f1, #8b5cf6);
     color: white;
-    border-radius: 8px;
+    border-radius: 10px;
+    padding: 10px 18px;
     font-weight: 600;
+    border: none;
 }
+.stButton>button:hover {
+    transform: scale(1.03);
+}
+
+/* INPUTS */
+textarea, input {
+    background-color: #020617 !important;
+    color: #e2e8f0 !important;
+    border-radius: 8px !important;
+}
+
+/* METRICS */
+[data-testid="metric-container"] {
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 15px;
+}
+
+/* HEADINGS */
+h1, h2, h3 {
+    color: #f1f5f9;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -92,8 +135,10 @@ def ai_score(text, jd):
         return 50
 
 # ================== HEADER ==================
-st.title("🧠 AI Recruitment ATS")
-st.caption("Smart Resume Screening System")
+st.markdown("""
+<h1 style='text-align:center;'>🧠 Premium AI Recruitment ATS</h1>
+<p style='text-align:center;color:#94a3b8;'>Executive Resume Intelligence Platform</p>
+""", unsafe_allow_html=True)
 
 # ================== SIDEBAR ==================
 st.sidebar.title("Navigation")
@@ -106,7 +151,7 @@ min_score = st.sidebar.slider("Minimum Score", 0, 100, 50)
 min_exp = st.sidebar.slider("Minimum Experience", 0, 20, 0)
 
 st.sidebar.markdown("---")
-st.sidebar.info("Upload resumes → Analyze → Shortlist or Reject")
+st.sidebar.info("Upload → Analyze → Decide")
 
 # ================== SCREENING ==================
 if page == "Screening":
@@ -116,10 +161,10 @@ if page == "Screening":
     files = st.file_uploader("Upload Resumes", ["pdf", "docx"], accept_multiple_files=True)
     jd = st.text_area("Paste Job Description")
 
-    if st.button("Analyze Candidates"):
+    if st.button("🚀 Analyze Candidates"):
 
         if not files or not jd:
-            st.warning("Please upload resumes and enter job description")
+            st.warning("Upload resumes and add job description")
         else:
             data = []
 
@@ -143,17 +188,17 @@ if page == "Screening":
             df = df.sort_values("Score", ascending=False)
 
             st.session_state.df = df
-            st.success("Analysis Complete!")
+            st.success("Analysis Complete")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ================== RESULTS ==================
+    # RESULTS
     if st.session_state.df is not None:
 
         df = st.session_state.df
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("Top Candidates")
+        st.subheader("🏆 Candidate Insights")
 
         for i, row in df.iterrows():
 
@@ -197,7 +242,7 @@ elif page == "Dashboard":
         df = st.session_state.df
 
         total = len(df)
-        avg_score = round(df["Score"].mean(), 2)
+        avg = round(df["Score"].mean(), 2)
 
         shortlisted = sum(
             1 for v in st.session_state.decisions.values()
@@ -205,8 +250,8 @@ elif page == "Dashboard":
         )
 
         col1, col2, col3 = st.columns(3)
-        col1.metric("Total", total)
-        col2.metric("Avg Score", avg_score)
+        col1.metric("Total Candidates", total)
+        col2.metric("Average Score", avg)
         col3.metric("Shortlisted", shortlisted)
 
         st.bar_chart(df.set_index("Candidate")["Score"])
@@ -232,6 +277,6 @@ elif page == "Pipeline":
         st.dataframe(df, use_container_width=True)
 
     else:
-        st.info("No data available")
+        st.info("No candidates available")
 
     st.markdown('</div>', unsafe_allow_html=True)
