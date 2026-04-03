@@ -74,11 +74,45 @@ st.markdown("""
 # 🧠 AI Recruitment Dashboard
 ### Intelligent Candidate Screening System
 """)
-
 # ================= SIDEBAR =================
-st.sidebar.markdown("## ⚙️ Filters")
+
+st.sidebar.markdown("""
+<h2 style='color:white;'>🧠 ATS Panel</h2>
+""", unsafe_allow_html=True)
+
+# Navigation
+st.sidebar.markdown("### 🧭 Navigation")
+page = st.sidebar.radio(
+    "Go to",
+    ["📥 Screening", "📊 Dashboard", "📂 Pipeline"]
+)
+
+st.sidebar.markdown("---")
+
+# Filters
+st.sidebar.markdown("### ⚙️ Filters")
+
 min_score = st.sidebar.slider("Minimum Score", 0, 100, 50)
 min_exp = st.sidebar.slider("Minimum Experience", 0, 10, 0)
+
+st.sidebar.markdown("---")
+
+# Instructions
+st.sidebar.markdown("### 📌 Instructions")
+
+st.sidebar.info("""
+1. Upload resumes (PDF/DOCX)
+2. Paste job description
+3. Click Analyze
+4. Review candidates
+""")
+
+st.sidebar.markdown("---")
+
+# System Info
+st.sidebar.markdown("### 📊 System Status")
+st.sidebar.success("✅ AI Engine Active")
+st.sidebar.success("✅ ATS Ready")
 
 # ================= TABS =================
 tab1, tab2, tab3 = st.tabs([
