@@ -76,6 +76,7 @@ st.markdown("""
 """)
 
 # ================= SIDEBAR =================
+
 st.sidebar.markdown("""
 <h2 style='color:white;'>🧠 ATS Panel</h2>
 """, unsafe_allow_html=True)
@@ -91,11 +92,6 @@ st.sidebar.markdown("---")
 
 # Filters
 st.sidebar.markdown("### ⚙️ Filters")
-
-page = st.sidebar.radio(
-    "🧭 Navigate",
-    ["📥 Resume Screening", "📊 Dashboard", "📂 Candidate Pipeline"]
-)
 
 min_score = st.sidebar.slider("Minimum Score", 0, 100, 50)
 min_exp = st.sidebar.slider("Minimum Experience", 0, 10, 0)
@@ -118,11 +114,15 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### 📊 System Status")
 st.sidebar.success("✅ AI Engine Active")
 st.sidebar.success("✅ ATS Ready")
-
 # ================= TABS =================
-page = st.sidebar.radio("Go to", ["Screening", "Dashboard", "Pipeline"])
+tab1, tab2, tab3 = st.tabs([
+    "📥 Resume Screening",
+    "📊 Dashboard",
+    "📂 Candidate Pipeline"
+])
+
 # ================= TAB 1 =================
-if page == "Screening":
+with tab1:
 
     uploaded_files = st.file_uploader(
         "Upload Resumes",
@@ -220,10 +220,9 @@ if page == "Screening":
             # TABLE
             st.subheader("📋 All Candidates")
             st.dataframe(df, use_container_width=True)
-            st.session_state["df"] = df
 
 # ================= TAB 2 =================
-elif page == "Dashboard":
+with tab2:
 
     st.subheader("📊 Hiring Dashboard")
 
@@ -239,10 +238,9 @@ elif page == "Dashboard":
 
     else:
         st.info("Run screening first")
-        df = st.session_state["df"]
 
 # ================= TAB 3 =================
-elif page == "Dashboard":
+with tab3:
 
     st.subheader("📂 Candidate Pipeline")
 
@@ -261,7 +259,6 @@ elif page == "Dashboard":
             df["Recruiter Decision"] = "Pending"
 
         st.dataframe(df, use_container_width=True)
-        df = st.session_state["df"]
 
         st.bar_chart(df["Stage"].value_counts())
 
