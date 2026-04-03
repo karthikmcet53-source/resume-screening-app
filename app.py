@@ -123,7 +123,7 @@ def convert_to_excel(df):
 # ================== HEADER ==================
 
 # 🧾 COMPANY LOGO (TOP)
-st.image("https://via.placeholder.com/120x50.png?text=Company+Logo")
+st.image("logo.png", width=150)
 
 st.markdown("""
 <h1 style='text-align:center;'>🧠 AI Recruitment ATS</h1>
@@ -133,7 +133,7 @@ st.markdown("""
 # ================== SIDEBAR ==================
 
 # 🧾 COMPANY LOGO (SIDEBAR)
-st.sidebar.image("https://via.placeholder.com/150x60.png?text=Company")
+st.sidebar.image("logo.png", width=150)
 
 st.sidebar.title("🧠 ATS Panel")
 
