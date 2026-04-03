@@ -4,7 +4,7 @@ import PyPDF2
 import pandas as pd
 import re
 from openai import OpenAI
-from io import BytesIO   # ✅ NEW
+from io import BytesIO
 
 # ================== CONFIG ==================
 st.set_page_config(page_title="AI Recruitment ATS", layout="wide")
@@ -55,7 +55,7 @@ if "df" not in st.session_state:
 if "decisions" not in st.session_state:
     st.session_state["decisions"] = {}
 
-if "resume_texts" not in st.session_state:   # ✅ NEW
+if "resume_texts" not in st.session_state:
     st.session_state["resume_texts"] = {}
 
 # ================== FUNCTIONS ==================
@@ -110,7 +110,6 @@ def ai_score(text, jd):
         return 50
 
 
-# ✅ NEW FUNCTION (EXPORT)
 def convert_to_excel(df):
     output = BytesIO()
     df.to_excel(output, index=False)
@@ -163,8 +162,6 @@ if page == "📥 Screening":
 
             for f in uploaded_files:
                 text = extract_text(f)
-
-                # ✅ STORE TEXT FOR PREVIEW
                 st.session_state["resume_texts"][f.name] = text
 
                 data.append({
@@ -186,12 +183,10 @@ if page == "📥 Screening":
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # RESULTS + PREVIEW
     if st.session_state["df"] is not None:
 
         df = st.session_state["df"]
 
-        # ✅ DROPDOWN FOR PREVIEW
         selected_candidate = st.selectbox(
             "🔍 Select Candidate for Resume Preview",
             df["Candidate"]
@@ -199,7 +194,6 @@ if page == "📥 Screening":
 
         col_left, col_right = st.columns([1,2])
 
-        # LEFT SIDE (UNCHANGED UI)
         with col_left:
 
             st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -228,7 +222,6 @@ if page == "📥 Screening":
 
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # RIGHT SIDE (✅ NEW PREVIEW)
         with col_right:
             st.markdown('<div class="card">', unsafe_allow_html=True)
             st.subheader("📄 Resume Preview")
@@ -242,7 +235,7 @@ if page == "📥 Screening":
 
             st.markdown('</div>', unsafe_allow_html=True)
 
-# ================== DASHBOARD ==================
+# ================== DASHBOARD (UPDATED) ==================
 elif page == "📊 Dashboard":
 
     st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -251,12 +244,49 @@ elif page == "📊 Dashboard":
 
         df = st.session_state["df"]
 
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Total Candidates", len(df))
-        col2.metric("Avg Score", round(df["Score"].mean(), 2))
-        col3.metric("Shortlisted", len(df[df["Score"] >= 70]))
+        # KPIs
+        total = len(df)
+        avg_score = round(df["Score"].mean(), 2)
 
-        st.bar_chart(df.set_index("Candidate")["Score"])
+        shortlisted = sum(
+            1 for v in st.session_state["decisions"].values()
+            if v == "Shortlisted"
+        )
+
+        rejected = sum(
+            1 for v in st.session_state["decisions"].values()
+            if v == "Rejected"
+        )
+
+        pending = total - (shortlisted + rejected)
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        col1.metric("Total Candidates", total)
+        col2.metric("Average Score", avg_score)
+        col3.metric("Shortlisted", shortlisted)
+        col4.metric("Rejected", rejected)
+
+        st.markdown("---")
+
+        # STATUS DISTRIBUTION
+        st.subheader("📊 Candidate Status Distribution")
+
+        status_df = pd.DataFrame({
+            "Status": ["Shortlisted", "Rejected", "Pending"],
+            "Count": [shortlisted, rejected, pending]
+        })
+
+        st.bar_chart(status_df.set_index("Status"))
+
+        # TOP PERFORMERS TABLE
+        st.markdown("---")
+        st.subheader("🏆 Top Performers")
+
+        st.dataframe(
+            df.sort_values("Score", ascending=False).head(5),
+            use_container_width=True
+        )
 
     else:
         st.info("Run screening first")
@@ -278,7 +308,6 @@ elif page == "📂 Pipeline":
 
         st.dataframe(df, use_container_width=True)
 
-        # ✅ EXPORT BUTTON
         excel = convert_to_excel(df)
 
         st.download_button(
