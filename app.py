@@ -28,11 +28,32 @@ def extract_experience(text):
     return max([int(x) for x in match], default=0)
 
 
-def score_resume(resume_text, jd_text):
-    resume_words = set(resume_text.lower().split())
-    jd_words = set(jd_text.lower().split())
-    score = len(resume_words & jd_words) / len(jd_words) if jd_words else 0
-    return round(score * 100, 2)
+def ai_score_resume(resume_text, jd_text):
+
+    prompt = f"""
+    Evaluate how well this resume matches the job description.
+
+    Resume:
+    {resume_text[:2000]}
+
+    Job Description:
+    {jd_text[:1000]}
+
+    Give a match score from 0 to 100.
+    Only return the number.
+    """
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        score = response.choices[0].message.content.strip()
+        return float(score)
+
+    except:
+        return 50  # fallback
 def generate_ai_summary(text):
     try:
         response = client.chat.completions.create(
@@ -146,16 +167,44 @@ if analyze:
 
         top_df = df.head(5)
 
-        for _, row in top_df.iterrows():
-            st.markdown(f"""
-            **{row['Candidate']}**  
-            Score: {row['Score']}% | Experience: {row['Experience']} yrs  
-            Status: {row['Status']}
-            """)
-            st.progress(int(row["Score"]))
+        for i, row in top_df.iterrows():
 
-        st.markdown("---")
+    candidate = row["Candidate"]
 
+    st.markdown(f"""
+    ### 👤 {candidate}
+    Score: {row['Score']}% | Experience: {row['Experience']} yrs  
+    Status: {row['Status']}
+    """)
+
+    col1, col2, col3 = st.columns(3)
+
+    # Shortlist button
+    if col1.button("✅ Shortlist", key=f"short_{i}"):
+        st.session_state["decisions"][candidate] = "Shortlisted"
+
+    # Reject button
+    if col2.button("❌ Reject", key=f"reject_{i}"):
+        st.session_state["decisions"][candidate] = "Rejected"
+
+    # Notes input
+    note = col3.text_input("📝 Notes", key=f"note_{i}")
+
+    # Save note
+    if note:
+        st.session_state["decisions"][candidate + "_note"] = note
+
+    # Show decision
+    if candidate in st.session_state["decisions"]:
+        decision = st.session_state["decisions"][candidate]
+        st.success(f"Decision: {decision}")
+
+    # Show note
+    if candidate + "_note" in st.session_state["decisions"]:
+        st.info(f"Note: {st.session_state['decisions'][candidate + '_note']}")
+
+    st.progress(int(row["Score"]))
+    st.markdown("---")
         # ================= TABLE =================
         st.markdown("## 📋 Candidate Pipeline")
 
@@ -214,7 +263,13 @@ with tab3:
                           "Rejected"
             )
 
-            st.dataframe(df, use_container_width=True)
+        if "decisions" in st.session_state:
+            decisions = st.session_state["decisions"]
+            df["Recruiter Decision"] = df["Candidate"].map(decisions).fillna("Pending")
+        else:
+            df["Recruiter Decision"] = "Pending"
+
+        st.dataframe(df, use_container_width=True)
 
             st.markdown("### Pipeline Distribution")
             st.bar_chart(df["Stage"].value_counts())
