@@ -91,7 +91,10 @@ def ai_score(text, jd):
     try:
         res = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "user", "content": f"Score 0-100:\n{text[:1500]}\nJD:\n{jd[:800]}"}]
+            messages=[{
+                "role": "user",
+                "content": f"Score this resume from 0-100 based on JD:\n{text[:1500]}\n\nJD:\n{jd[:800]}"
+            }]
         )
         return float(res.choices[0].message.content.strip())
     except:
@@ -106,6 +109,7 @@ st.markdown("""
 # ================== SIDEBAR ==================
 st.sidebar.title("🧠 ATS Panel")
 
+# NAVIGATION
 page = st.sidebar.radio(
     "Navigation",
     ["📥 Screening", "📊 Dashboard", "📂 Pipeline"]
@@ -113,15 +117,46 @@ page = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 
+# FILTERS
+st.sidebar.subheader("⚙️ Filters")
+
 min_score = st.sidebar.slider("Minimum Score", 0, 100, 50)
 min_exp = st.sidebar.slider("Minimum Experience", 0, 10, 0)
+
+st.sidebar.markdown("---")
+
+# INSTRUCTIONS (NEW)
+st.sidebar.subheader("📌 Instructions")
+
+st.sidebar.markdown("""
+**How to use this ATS:**
+
+1. 📥 Upload resumes (PDF/DOCX)  
+2. 📝 Paste job description  
+3. 🚀 Click **Analyze Candidates**  
+4. 📊 View top candidates  
+5. ✅ Shortlist / ❌ Reject candidates  
+6. 📂 Track decisions in Pipeline  
+
+---
+
+**Tips:**
+- Use clear job descriptions  
+- Upload multiple resumes  
+- Adjust filters for better results  
+""")
 
 # ================== SCREENING ==================
 if page == "📥 Screening":
 
     st.markdown('<div class="card">', unsafe_allow_html=True)
 
-    uploaded_files = st.file_uploader("Upload Resumes", type=["pdf","docx"], accept_multiple_files=True)
+    uploaded_files = st.file_uploader(
+        "Upload Resumes",
+        type=["pdf","docx"],
+        accept_multiple_files=True
+    )
+
     jd = st.text_area("Paste Job Description")
 
     if st.button("🚀 Analyze Candidates"):
@@ -141,7 +176,12 @@ if page == "📥 Screening":
                 })
 
             df = pd.DataFrame(data)
-            df = df[(df["Score"] >= min_score) & (df["Experience"] >= min_exp)]
+
+            df = df[
+                (df["Score"] >= min_score) &
+                (df["Experience"] >= min_exp)
+            ]
+
             df = df.sort_values("Score", ascending=False)
 
             st.session_state["df"] = df
@@ -166,10 +206,10 @@ if page == "📥 Screening":
 
             col1, col2 = st.columns(2)
 
-            if col1.button("Shortlist", key=f"s{i}"):
+            if col1.button("✅ Shortlist", key=f"s{i}"):
                 st.session_state["decisions"][name] = "Shortlisted"
 
-            if col2.button("Reject", key=f"r{i}"):
+            if col2.button("❌ Reject", key=f"r{i}"):
                 st.session_state["decisions"][name] = "Rejected"
 
             decision = st.session_state["decisions"].get(name, "Pending")
@@ -190,6 +230,7 @@ elif page == "📊 Dashboard":
         df = st.session_state["df"]
 
         col1, col2, col3 = st.columns(3)
+
         col1.metric("Total Candidates", len(df))
         col2.metric("Avg Score", round(df["Score"].mean(), 2))
         col3.metric("Shortlisted", len(df[df["Score"] >= 70]))
