@@ -74,8 +74,8 @@ st.markdown("""
 # 🧠 AI Recruitment Dashboard
 ### Intelligent Candidate Screening System
 """)
-# ================= SIDEBAR =================
 
+# ================= SIDEBAR =================
 st.sidebar.markdown("""
 <h2 style='color:white;'>🧠 ATS Panel</h2>
 """, unsafe_allow_html=True)
@@ -114,8 +114,15 @@ st.sidebar.markdown("### 📊 System Status")
 st.sidebar.success("✅ AI Engine Active")
 st.sidebar.success("✅ ATS Ready")
 
+# ================= TABS =================
+tab1, tab2, tab3 = st.tabs([
+    "📥 Resume Screening",
+    "📊 Dashboard",
+    "📂 Candidate Pipeline"
+])
+
 # ================= TAB 1 =================
-if page == "Screening":
+with tab1:
 
     uploaded_files = st.file_uploader(
         "Upload Resumes",
@@ -215,7 +222,7 @@ if page == "Screening":
             st.dataframe(df, use_container_width=True)
 
 # ================= TAB 2 =================
-elif page == "Dashboard":
+with tab2:
 
     st.subheader("📊 Hiring Dashboard")
 
@@ -233,7 +240,7 @@ elif page == "Dashboard":
         st.info("Run screening first")
 
 # ================= TAB 3 =================
-elif page == "Dashboard":
+with tab3:
 
     st.subheader("📂 Candidate Pipeline")
 
