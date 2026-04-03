@@ -49,13 +49,13 @@ def generate_ai_summary(text):
         return "Summary not available"
 
 # Page config
-st.set_page_config(page_title="AI Resume Screening Tool", layout="wide")
+st.set_page_config(page_title="AI Recruitment ATS",layout="wide")
 
 # ================= HEADER =================
 st.markdown("""
-    <h1 style='color:#1F4E79;'>📊 Talent Screening System</h1>
-    <hr>
-""", unsafe_allow_html=True)
+# 🧠 AI Recruitment Dashboard
+### Intelligent Candidate Screening System
+""")
 
 # ================= SIDEBAR =================
 st.sidebar.markdown("## 🧭 Navigation")
@@ -72,25 +72,30 @@ st.sidebar.markdown("## 📌 Instructions")
 st.sidebar.info("""
 Upload resumes → Enter JD → Analyze → Filter candidates
 """)
-
-# ================= MAIN =================
-st.markdown("### 📂 Upload Candidate Resumes")
-uploaded_files = st.file_uploader(
+# ================= TABS =================
+tab1, tab2, tab3 = st.tabs([
+    "📥 Resume Screening",
+    "📊 Dashboard",
+    "📂 Candidate Pipeline"
+])
+with tab1:
+    st.markdown("### 📂 Upload Candidate Resumes")
+    uploaded_files = st.file_uploader(
     "Upload Files",
     type=["pdf", "docx"],
     accept_multiple_files=True
-)
+    )
 
-st.markdown("### 📝 Job Description")
-jd_text = st.text_area("Enter job description", height=120)
+    st.markdown("### 📝 Job Description")
+    jd_text = st.text_area("Enter job description", height=120)
 
-st.markdown("---")
+    st.markdown("---")
 
-col1, col2, col3 = st.columns([1,2,1])
-analyze = col2.button("🚀 Run Screening")
+    col1, col2, col3 = st.columns([1,2,1])
+    analyze = col2.button("🚀 Run Screening")
 
-# ================= RESULTS =================
-if analyze:
+    # ================= RESULTS =================
+    if analyze:
 
     if not uploaded_files or not jd_text:
         st.warning("Please upload resumes and enter job description")
@@ -173,3 +178,45 @@ if analyze:
             "candidates.csv",
             "text/csv"
         )
+with tab2:
+    st.subheader("📊 Hiring Dashboard")
+
+    try:
+        if 'df' in locals() and not df.empty:
+
+            col1, col2, col3 = st.columns(3)
+
+            col1.metric("Total Candidates", len(df))
+            col2.metric("Avg Score", round(df["Score"].mean(), 2))
+            col3.metric("Shortlisted", len(df[df["Score"] >= 70]))
+
+            st.markdown("### Score Distribution")
+            st.bar_chart(df.set_index("Candidate")["Score"])
+
+        else:
+            st.info("Run screening to see dashboard")
+
+    except:
+        st.info("No data available yet")
+with tab3:
+    st.subheader("📂 Candidate Pipeline")
+
+    try:
+        if 'df' in locals() and not df.empty:
+
+            df["Stage"] = df["Score"].apply(
+                lambda x: "Interview" if x >= 80 else
+                          "Review" if x >= 60 else
+                          "Rejected"
+            )
+
+            st.dataframe(df, use_container_width=True)
+
+            st.markdown("### Pipeline Distribution")
+            st.bar_chart(df["Stage"].value_counts())
+
+        else:
+            st.info("No candidates available")
+
+    except:
+        st.info("Run screening first")
