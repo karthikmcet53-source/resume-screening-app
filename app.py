@@ -99,6 +99,7 @@ with tab1:
 
     if not uploaded_files or not jd_text:
         st.warning("Please upload resumes and enter job description")
+
     else:
         results = []
 
@@ -109,10 +110,11 @@ with tab1:
             exp = extract_experience(text)
 
             results.append({
-    "Candidate": file.name,
-    "Score": score,
-    "Experience": exp,
-    "Summary": generate_ai_summary(text)})
+                "Candidate": file.name,
+                "Score": score,
+                "Experience": exp,
+                "Summary": generate_ai_summary(text)
+            })
 
         df = pd.DataFrame(results)
 
