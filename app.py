@@ -7,6 +7,74 @@ from openai import OpenAI
 
 # ================= INIT =================
 st.set_page_config(page_title="AI Recruitment ATS", layout="wide")
+st.markdown("""
+<style>
+
+/* Background */
+.stApp {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    color: white;
+}
+
+/* Glass Card */
+.glass {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+/* Buttons */
+.stButton>button {
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    color: white;
+    border-radius: 10px;
+    padding: 10px 20px;
+    border: none;
+    font-weight: 600;
+    transition: 0.3s;
+}
+
+.stButton>button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 20px rgba(99,102,241,0.5);
+}
+
+/* Tabs */
+button[data-baseweb="tab"] {
+    font-size: 16px;
+    font-weight: 600;
+    color: #cbd5f5;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: white;
+    border-bottom: 3px solid #6366f1;
+}
+
+/* Metrics */
+[data-testid="metric-container"] {
+    background: rgba(255,255,255,0.08);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Input fields */
+textarea, input {
+    background-color: rgba(255,255,255,0.08) !important;
+    color: white !important;
+}
+
+/* Progress bar */
+.stProgress > div > div > div {
+    background-color: #6366f1;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
@@ -71,10 +139,13 @@ def generate_ai_summary(text):
 
 # ================= HEADER =================
 st.markdown("""
-# 🧠 AI Recruitment Dashboard
-### Intelligent Candidate Screening System
-""")
-
+<h1 style='text-align: center; color: white;'>
+🧠 AI Recruitment ATS
+</h1>
+<p style='text-align: center; color: #cbd5f5; font-size:18px;'>
+Smart Resume Screening & Candidate Intelligence Platform
+</p>
+""", unsafe_allow_html=True)
 # ================= SIDEBAR =================
 
 st.sidebar.markdown("""
@@ -89,6 +160,13 @@ page = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<style>
+[data-testid="stSidebar"] {
+    background: #020617;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # Filters
 st.sidebar.markdown("### ⚙️ Filters")
@@ -169,15 +247,17 @@ with tab1:
             )
 
             # KPIs
-            st.subheader("📊 Overview")
-            col1, col2, col3 = st.columns(3)
+            st.markdown('<div class="glass">', unsafe_allow_html=True)
 
+            st.subheader("📊 Overview")
+
+            col1, col2, col3 = st.columns(3)
             col1.metric("Total", len(df))
             col2.metric("Avg Score", round(df["Score"].mean(), 2))
             col3.metric("Shortlisted", len(df[df["Score"] >= 70]))
 
-            st.markdown("---")
-
+            st.markdown('</div>', unsafe_allow_html=True)
+            
             # TOP CANDIDATES WITH BUTTONS
             st.subheader("🏆 Top Candidates")
 
@@ -188,11 +268,13 @@ with tab1:
                 candidate = row["Candidate"]
 
                 st.markdown(f"""
-                ### 👤 {candidate}
-                Score: {row['Score']}% | Experience: {row['Experience']} yrs
-                Status: {row['Status']}
-                """)
-
+                <div class="glass">
+                <h3>👤 {candidate}</h3>
+                <p>Score: {row['Score']}% | Experience: {row['Experience']} yrs</p>
+                <p>Status: {row['Status']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
                 col1, col2, col3 = st.columns(3)
 
                 if col1.button("✅ Shortlist", key=f"short_{i}"):
