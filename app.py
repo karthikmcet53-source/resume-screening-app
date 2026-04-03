@@ -114,15 +114,8 @@ st.sidebar.markdown("### 📊 System Status")
 st.sidebar.success("✅ AI Engine Active")
 st.sidebar.success("✅ ATS Ready")
 
-# ================= TABS =================
-tab1, tab2, tab3 = st.tabs([
-    "📥 Resume Screening",
-    "📊 Dashboard",
-    "📂 Candidate Pipeline"
-])
-
 # ================= TAB 1 =================
-with tab1:
+if page == "Screening":
 
     uploaded_files = st.file_uploader(
         "Upload Resumes",
@@ -222,7 +215,7 @@ with tab1:
             st.dataframe(df, use_container_width=True)
 
 # ================= TAB 2 =================
-with tab2:
+elif page == "Dashboard":
 
     st.subheader("📊 Hiring Dashboard")
 
@@ -240,7 +233,7 @@ with tab2:
         st.info("Run screening first")
 
 # ================= TAB 3 =================
-with tab3:
+elif page == "Dashboard":
 
     st.subheader("📂 Candidate Pipeline")
 
