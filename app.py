@@ -235,7 +235,7 @@ if page == "📥 Screening":
 
             st.markdown('</div>', unsafe_allow_html=True)
 
-# ================== DASHBOARD (UPDATED) ==================
+# ================== DASHBOARD (ENHANCED) ==================
 elif page == "📊 Dashboard":
 
     st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -244,49 +244,38 @@ elif page == "📊 Dashboard":
 
         df = st.session_state["df"]
 
-        # KPIs
-        total = len(df)
-        avg_score = round(df["Score"].mean(), 2)
+        shortlisted = sum(1 for v in st.session_state["decisions"].values() if v == "Shortlisted")
+        rejected = sum(1 for v in st.session_state["decisions"].values() if v == "Rejected")
+        pending = len(df) - (shortlisted + rejected)
 
-        shortlisted = sum(
-            1 for v in st.session_state["decisions"].values()
-            if v == "Shortlisted"
-        )
-
-        rejected = sum(
-            1 for v in st.session_state["decisions"].values()
-            if v == "Rejected"
-        )
-
-        pending = total - (shortlisted + rejected)
-
-        col1, col2, col3, col4 = st.columns(4)
-
-        col1.metric("Total Candidates", total)
-        col2.metric("Average Score", avg_score)
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Candidates", len(df))
+        col2.metric("Average Score", round(df["Score"].mean(), 2))
         col3.metric("Shortlisted", shortlisted)
-        col4.metric("Rejected", rejected)
 
         st.markdown("---")
 
-        # STATUS DISTRIBUTION
-        st.subheader("📊 Candidate Status Distribution")
-
-        status_df = pd.DataFrame({
+        # 🥧 PIE CHART
+        st.subheader("🥧 Hiring Distribution")
+        pie_df = pd.DataFrame({
             "Status": ["Shortlisted", "Rejected", "Pending"],
             "Count": [shortlisted, rejected, pending]
         })
+        st.pyplot(pie_df.set_index("Status").plot.pie(y="Count", autopct='%1.1f%%').figure)
 
-        st.bar_chart(status_df.set_index("Status"))
-
-        # TOP PERFORMERS TABLE
         st.markdown("---")
-        st.subheader("🏆 Top Performers")
 
-        st.dataframe(
-            df.sort_values("Score", ascending=False).head(5),
-            use_container_width=True
-        )
+        # 📈 TREND ANALYSIS (Score Buckets)
+        st.subheader("📈 Score Trend Analysis")
+
+        bins = [0, 40, 60, 80, 100]
+        labels = ["0-40", "40-60", "60-80", "80-100"]
+
+        df["Score Range"] = pd.cut(df["Score"], bins=bins, labels=labels)
+
+        trend_df = df["Score Range"].value_counts().sort_index()
+
+        st.line_chart(trend_df)
 
     else:
         st.info("Run screening first")
