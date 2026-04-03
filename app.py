@@ -73,7 +73,6 @@ def extract_text(file):
 
 def extract_experience(text):
     text = text.lower()
-
     patterns = [
         r'(\d+\.?\d*)\s*\+?\s*(years|yrs|year)',
         r'experience\s*[:\-]?\s*(\d+\.?\d*)',
@@ -83,7 +82,6 @@ def extract_experience(text):
     ]
 
     values = []
-
     for pattern in patterns:
         matches = re.findall(pattern, text)
         for match in matches:
@@ -134,32 +132,18 @@ st.sidebar.markdown("---")
 min_score = st.sidebar.slider("Minimum Score", 0, 100, 50)
 min_exp = st.sidebar.slider("Minimum Experience", 0, 20, 0)
 
-st.sidebar.markdown("---")
-
-st.sidebar.subheader("📌 Instructions")
-st.sidebar.markdown("""
-1. Upload resumes  
-2. Paste job description  
-3. Click Analyze  
-4. Review candidates  
-5. Shortlist / Reject  
-""")
-
 # ================== SCREENING ==================
 if page == "📥 Screening":
-
     st.markdown('<div class="card">', unsafe_allow_html=True)
 
     uploaded_files = st.file_uploader("Upload Resumes", type=["pdf","docx"], accept_multiple_files=True)
     jd = st.text_area("Paste Job Description")
 
     if st.button("🚀 Analyze Candidates"):
-
         if not uploaded_files or not jd:
             st.warning("Upload resumes and add job description")
         else:
             data = []
-
             for f in uploaded_files:
                 text = extract_text(f)
                 st.session_state["resume_texts"][f.name] = text
@@ -171,12 +155,7 @@ if page == "📥 Screening":
                 })
 
             df = pd.DataFrame(data)
-
-            df = df[
-                (df["Score"] >= min_score) &
-                (df["Experience"] >= min_exp)
-            ]
-
+            df = df[(df["Score"] >= min_score) & (df["Experience"] >= min_exp)]
             df = df.sort_values("Score", ascending=False)
 
             st.session_state["df"] = df
@@ -184,111 +163,89 @@ if page == "📥 Screening":
     st.markdown('</div>', unsafe_allow_html=True)
 
     if st.session_state["df"] is not None:
-
         df = st.session_state["df"]
 
-        selected_candidate = st.selectbox(
-            "🔍 Select Candidate for Resume Preview",
-            df["Candidate"]
-        )
+        selected_candidate = st.selectbox("Select Candidate", df["Candidate"])
 
-        col_left, col_right = st.columns([1,2])
+        col1, col2 = st.columns([1,2])
 
-        with col_left:
-
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader("🏆 Top Candidates")
-
+        with col1:
+            st.subheader("Candidates")
             for i, row in df.head(5).iterrows():
-
                 name = row["Candidate"]
+                st.write(f"{name} | Score: {row['Score']}")
 
-                st.write(f"👤 {name}")
-                st.write(f"Score: {row['Score']} | Experience: {row['Experience']} yrs")
-
-                col1, col2 = st.columns(2)
-
-                if col1.button("✅ Shortlist", key=f"s{i}"):
+                if st.button("Shortlist", key=f"s{i}"):
                     st.session_state["decisions"][name] = "Shortlisted"
 
-                if col2.button("❌ Reject", key=f"r{i}"):
+                if st.button("Reject", key=f"r{i}"):
                     st.session_state["decisions"][name] = "Rejected"
 
-                decision = st.session_state["decisions"].get(name, "Pending")
-                st.info(f"Status: {decision}")
-
-                st.progress(int(row["Score"]))
+                st.write(st.session_state["decisions"].get(name, "Pending"))
                 st.markdown("---")
 
-            st.markdown('</div>', unsafe_allow_html=True)
+        with col2:
+            st.subheader("Resume Preview")
+            st.text_area("", st.session_state["resume_texts"].get(selected_candidate, ""), height=500)
 
-        with col_right:
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader("📄 Resume Preview")
-
-            text = st.session_state["resume_texts"].get(selected_candidate, "")
-
-            if text:
-                st.text_area("Resume Content", text, height=500)
-            else:
-                st.info("No preview available")
-
-            st.markdown('</div>', unsafe_allow_html=True)
-
-# ================== DASHBOARD (ENHANCED) ==================
+# ================== DASHBOARD (CORPORATE STYLE) ==================
 elif page == "📊 Dashboard":
 
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-
     if st.session_state["df"] is not None:
-
         df = st.session_state["df"]
 
         shortlisted = sum(1 for v in st.session_state["decisions"].values() if v == "Shortlisted")
         rejected = sum(1 for v in st.session_state["decisions"].values() if v == "Rejected")
         pending = len(df) - (shortlisted + rejected)
 
-        col1, col2, col3 = st.columns(3)
+        # KPI ROW
+        st.subheader("Key Metrics")
+        col1, col2, col3, col4 = st.columns(4)
+
         col1.metric("Total Candidates", len(df))
         col2.metric("Average Score", round(df["Score"].mean(), 2))
         col3.metric("Shortlisted", shortlisted)
+        col4.metric("Pending", pending)
 
         st.markdown("---")
 
-        # 🥧 PIE CHART
-        st.subheader("🥧 Hiring Distribution")
-        pie_df = pd.DataFrame({
+        # STATUS TABLE
+        st.subheader("Hiring Summary")
+        summary_df = pd.DataFrame({
             "Status": ["Shortlisted", "Rejected", "Pending"],
             "Count": [shortlisted, rejected, pending]
         })
-        st.pyplot(pie_df.set_index("Status").plot.pie(y="Count", autopct='%1.1f%%').figure)
+        st.dataframe(summary_df, use_container_width=True)
 
         st.markdown("---")
 
-        # 📈 TREND ANALYSIS (Score Buckets)
-        st.subheader("📈 Score Trend Analysis")
+        # SCORE SEGMENTATION
+        st.subheader("Score Segmentation")
 
-        bins = [0, 40, 60, 80, 100]
-        labels = ["0-40", "40-60", "60-80", "80-100"]
+        df["Category"] = pd.cut(
+            df["Score"],
+            bins=[0, 50, 75, 100],
+            labels=["Low", "Medium", "High"]
+        )
 
-        df["Score Range"] = pd.cut(df["Score"], bins=bins, labels=labels)
+        seg_df = df["Category"].value_counts().reset_index()
+        seg_df.columns = ["Category", "Count"]
 
-        trend_df = df["Score Range"].value_counts().sort_index()
+        st.dataframe(seg_df, use_container_width=True)
 
-        st.line_chart(trend_df)
+        st.markdown("---")
+
+        # TOP CANDIDATES
+        st.subheader("Top Candidates")
+        st.dataframe(df.head(5), use_container_width=True)
 
     else:
         st.info("Run screening first")
 
-    st.markdown('</div>', unsafe_allow_html=True)
-
 # ================== PIPELINE ==================
 elif page == "📂 Pipeline":
 
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-
     if st.session_state["df"] is not None:
-
         df = st.session_state["df"].copy()
 
         df["Decision"] = df["Candidate"].map(
@@ -300,7 +257,7 @@ elif page == "📂 Pipeline":
         excel = convert_to_excel(df)
 
         st.download_button(
-            label="📥 Export to Excel",
+            label="Export to Excel",
             data=excel,
             file_name="ATS_Report.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -308,5 +265,3 @@ elif page == "📂 Pipeline":
 
     else:
         st.info("No candidates yet")
-
-    st.markdown('</div>', unsafe_allow_html=True)
