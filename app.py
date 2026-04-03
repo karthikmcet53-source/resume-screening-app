@@ -43,6 +43,13 @@ textarea, input {
     padding: 15px;
     border-radius: 10px;
 }
+
+/* KPI COLOR INDICATORS */
+.kpi-green { border-left: 6px solid #22c55e; padding-left: 10px; }
+.kpi-red { border-left: 6px solid #ef4444; padding-left: 10px; }
+.kpi-blue { border-left: 6px solid #3b82f6; padding-left: 10px; }
+.kpi-yellow { border-left: 6px solid #f59e0b; padding-left: 10px; }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -114,12 +121,20 @@ def convert_to_excel(df):
     return output.getvalue()
 
 # ================== HEADER ==================
+
+# 🧾 COMPANY LOGO (TOP)
+st.image("https://via.placeholder.com/120x50.png?text=Company+Logo")
+
 st.markdown("""
 <h1 style='text-align:center;'>🧠 AI Recruitment ATS</h1>
 <p style='text-align:center;color:#475569;'>Smart Resume Screening Platform</p>
 """, unsafe_allow_html=True)
 
 # ================== SIDEBAR ==================
+
+# 🧾 COMPANY LOGO (SIDEBAR)
+st.sidebar.image("https://via.placeholder.com/150x60.png?text=Company")
+
 st.sidebar.title("🧠 ATS Panel")
 
 page = st.sidebar.radio(
@@ -132,8 +147,22 @@ st.sidebar.markdown("---")
 min_score = st.sidebar.slider("Minimum Score", 0, 100, 50)
 min_exp = st.sidebar.slider("Minimum Experience", 0, 20, 0)
 
+st.sidebar.markdown("---")
+
+st.sidebar.subheader("📌 Instructions")
+st.sidebar.markdown("""
+1. Upload resumes  
+2. Paste job description  
+3. Click Analyze Candidates  
+4. Review candidates  
+5. Shortlist or Reject  
+6. View dashboard insights  
+7. Export results  
+""")
+
 # ================== SCREENING ==================
 if page == "📥 Screening":
+
     st.markdown('<div class="card">', unsafe_allow_html=True)
 
     uploaded_files = st.file_uploader("Upload Resumes", type=["pdf","docx"], accept_multiple_files=True)
@@ -188,7 +217,7 @@ if page == "📥 Screening":
             st.subheader("Resume Preview")
             st.text_area("", st.session_state["resume_texts"].get(selected_candidate, ""), height=500)
 
-# ================== DASHBOARD (CORPORATE STYLE) ==================
+# ================== DASHBOARD ==================
 elif page == "📊 Dashboard":
 
     if st.session_state["df"] is not None:
@@ -198,18 +227,32 @@ elif page == "📊 Dashboard":
         rejected = sum(1 for v in st.session_state["decisions"].values() if v == "Rejected")
         pending = len(df) - (shortlisted + rejected)
 
-        # KPI ROW
         st.subheader("Key Metrics")
+
         col1, col2, col3, col4 = st.columns(4)
 
-        col1.metric("Total Candidates", len(df))
-        col2.metric("Average Score", round(df["Score"].mean(), 2))
-        col3.metric("Shortlisted", shortlisted)
-        col4.metric("Pending", pending)
+        with col1:
+            st.markdown('<div class="kpi-blue">', unsafe_allow_html=True)
+            st.metric("Total Candidates", len(df))
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with col2:
+            st.markdown('<div class="kpi-yellow">', unsafe_allow_html=True)
+            st.metric("Average Score", round(df["Score"].mean(), 2))
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with col3:
+            st.markdown('<div class="kpi-green">', unsafe_allow_html=True)
+            st.metric("Shortlisted", shortlisted)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with col4:
+            st.markdown('<div class="kpi-red">', unsafe_allow_html=True)
+            st.metric("Pending", pending)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("---")
 
-        # STATUS TABLE
         st.subheader("Hiring Summary")
         summary_df = pd.DataFrame({
             "Status": ["Shortlisted", "Rejected", "Pending"],
@@ -219,23 +262,6 @@ elif page == "📊 Dashboard":
 
         st.markdown("---")
 
-        # SCORE SEGMENTATION
-        st.subheader("Score Segmentation")
-
-        df["Category"] = pd.cut(
-            df["Score"],
-            bins=[0, 50, 75, 100],
-            labels=["Low", "Medium", "High"]
-        )
-
-        seg_df = df["Category"].value_counts().reset_index()
-        seg_df.columns = ["Category", "Count"]
-
-        st.dataframe(seg_df, use_container_width=True)
-
-        st.markdown("---")
-
-        # TOP CANDIDATES
         st.subheader("Top Candidates")
         st.dataframe(df.head(5), use_container_width=True)
 
