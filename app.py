@@ -95,7 +95,8 @@ with tab1:
     analyze = col2.button("🚀 Run Screening")
 
     # ================= RESULTS =================
-    if analyze:
+    # ================= RESULTS =================
+if analyze:
 
     if not uploaded_files or not jd_text:
         st.warning("Please upload resumes and enter job description")
@@ -115,7 +116,6 @@ with tab1:
                 "Experience": exp,
                 "Summary": generate_ai_summary(text)
             })
-
         df = pd.DataFrame(results)
 
         # Apply filters
